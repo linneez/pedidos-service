@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: lojaveloz_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - rede-loja
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "15672:15672"
+    networks:
+      - rede-loja
+
+  api-gateway:
+    build: ./servicos/api-gateway
+    ports:
+      - "8080:3000"
+    environment:
+      - PEDIDOS_URL=http://pedidos:3000
+    depends_on:
+      - pedidos
+    networks:
+      - rede-loja
+
+  pedidos:
+    build: ./servicos/pedidos
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=admin
+      - DB_PASSWORD=secret
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      - postgres
+      - rabbitmq
+    networks:
+      - rede-loja
+
+  pagamentos:
+    build: ./servicos/pagamentos
+    networks:
+      - rede-loja
+
+  estoque:
+    build: ./servicos/estoque
+    networks:
+      - rede-loja
+
+volumes:
+  pgdata:
+
+networks:
+  rede-loja:
+    driver: bridge
